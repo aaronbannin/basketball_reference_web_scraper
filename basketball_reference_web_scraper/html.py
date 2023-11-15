@@ -1251,6 +1251,7 @@ class ConferenceDivisionStandingsRow:
     def stat_names(cls) -> list[str]:
         """
         Returns a list of the stat names extracted from the row.
+        First looks for @property decorator, then removes ignored properties.
         Helpful for reflection.
         """
         ignored_properties = {
@@ -1273,4 +1274,4 @@ class ConferenceDivisionStandingsRow:
 
             return str_to_int(stat_value)
 
-        return { s: get_and_format(s) for s in self.stat_names() }
+        return {s: get_and_format(s) for s in self.stat_names()}
