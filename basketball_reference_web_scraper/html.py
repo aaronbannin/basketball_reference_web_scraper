@@ -1,7 +1,10 @@
 import re
+from typing import Any, Optional
+
 from lxml import html
 from lxml.html import HtmlComment
 
+from basketball_reference_web_scraper.utilities import str_to_int, str_to_float
 
 class BasicBoxScoreRow:
     def __init__(self, html):
@@ -251,8 +254,8 @@ class PlayerAdvancedSeasonTotalsTable:
             //table[@id="advanced_stats"]
             /tbody
             /tr[
-                contains(@class, "full_table") or 
-                contains(@class, "italic_text partial_table") 
+                contains(@class, "full_table") or
+                contains(@class, "italic_text partial_table")
                 and not(contains(@class, "rowSum"))
             ]
         """
@@ -283,8 +286,8 @@ class PlayerSeasonTotalTable:
             //table[@id="totals_stats"]
             /tbody
             /tr[
-                contains(@class, "full_table") or 
-                contains(@class, "italic_text partial_table") 
+                contains(@class, "full_table") or
+                contains(@class, "italic_text partial_table")
                 and not(contains(@class, "rowSum"))
             ]
         """
@@ -662,10 +665,10 @@ class PlayerSeasonBoxScoresPage:
     """
     This is a limitation of requests as the playoff box scores table is "hidden" in a comment that is rendered later
     via some JavaScript.
-    
+
     Because requests only fetches the raw HTML and doesn't process any JavaScript, this DOM element that (eventually)
     renders in the browser is not part of the HTML that is part of the initial fetched markup.
-    
+
     Thus, the comment containing the playoff table is identified and parsed and then fed into lxml to create the element
     tree that will eventually be rendered on the page.
     """
@@ -1193,38 +1196,77 @@ class ConferenceDivisionStandingsRow:
     def is_standings_row(self):
         return self.html.attrib['class'] == 'full_table'
 
-    @property
-    def division_name(self):
-        cells = self.html.xpath('.//th')
+    def _get_xpath(self, xpath: str) -> Optional[Any]:
+        """
+        Utility method for extracting data.
+        Should be pushed up to a super() class?
+        """
+        cells = self.html.xpath(xpath)
 
         if len(cells) == 1:
             return cells[0].text_content()
 
         return None
+
+    def _get_data_stat_attribute(self, attribute: str):
+        return self._get_xpath(f'.//td[@data-stat="{attribute}"]')
+
+    @property
+    def division_name(self):
+        return self._get_xpath('.//th')
 
     @property
     def team_name(self):
-        cells = self.html.xpath('.//th[@data-stat="team_name"]')
-
-        if len(cells) == 1:
-            return cells[0].text_content()
-
-        return None
+        return self._get_xpath('.//th[@data-stat="team_name"]')
 
     @property
     def wins(self):
-        cells = self.html.xpath('.//td[@data-stat="wins"]')
-
-        if len(cells) == 1:
-            return cells[0].text_content()
-
-        return None
+        return self._get_data_stat_attribute('wins')
 
     @property
     def losses(self):
-        cells = self.html.xpath('.//td[@data-stat="losses"]')
+        return self._get_data_stat_attribute('losses')
 
-        if len(cells) == 1:
-            return cells[0].text_content()
+    @property
+    def win_loss_pct(self):
+        return self._get_data_stat_attribute('win_loss_pct')
 
-        return None
+    @property
+    def gb(self):
+        return self._get_data_stat_attribute('gb')
+
+    @property
+    def pts_per_g(self):
+        return self._get_data_stat_attribute('pts_per_g')
+
+    @property
+    def opp_pts_per_g(self):
+        return self._get_data_stat_attribute('opp_pts_per_g')
+
+    @property
+    def srs(self):
+        return self._get_data_stat_attribute('srs')
+
+    @classmethod
+    def stat_names(cls) -> list[str]:
+        """
+        Returns a list of the stat names extracted from the row.
+        Helpful for reflection.
+        """
+        ignored_properties = {
+            'is_division_name_row',
+            'is_standings_row',
+            'division_name',
+            'team_name'
+        }
+
+        return [prop for prop in dir(cls) if isinstance(getattr(cls, prop), property) and prop not in ignored_properties]
+
+    def stats(self):
+        def get_and_format(stat_name):
+            stat_value = getattr(self, stat_name)
+            if "." in stat_value:
+                return str_to_float(stat_value)
+            return str_to_int(stat_value)
+
+        return { s: get_and_format(s) for s in self.stat_names() }
