@@ -35,10 +35,6 @@ def standings(season_end_year, output_type=None, output_file_path=None, output_w
     )
     return output_service.output(data=values, options=options)
 
-def new_method(season_end_year):
-    return standings(season_end_year)
-
-
 def player_box_scores(day, month, year, output_type=None, output_file_path=None, output_write_option=None,
                       json_options=None):
     try:

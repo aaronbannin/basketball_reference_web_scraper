@@ -1263,10 +1263,14 @@ class ConferenceDivisionStandingsRow:
         return [prop for prop in dir(cls) if isinstance(getattr(cls, prop), property) and prop not in ignored_properties]
 
     def stats(self):
+        """
+        Dictionary representation of stats parsed from the row.
+        """
         def get_and_format(stat_name):
             stat_value = getattr(self, stat_name)
             if "." in stat_value:
                 return str_to_float(stat_value)
+
             return str_to_int(stat_value)
 
         return { s: get_and_format(s) for s in self.stat_names() }
